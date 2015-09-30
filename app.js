@@ -7,7 +7,7 @@ var createjob = require(__dirname + '/amazon-params/createJob');
 
 var Transcode = require('./libs/amazon/Transcode');
 var AS3 = require('./libs/amazon/AS3');
-var Job = require('./libs/amazon/Job');
+var Job = require('./libs/amazon/JobLoader');
 var amazon = require('./libs/amazon/Amazon');
 
 var codes = require('./messages/res-content');
@@ -39,18 +39,37 @@ app.get('/getvideo', function (req, res) {
 
 });
 
+app.get('/jobStatus', function (req, res) {
+  var t = new Transcode(amazon.loadConfig('transcode').AWS);
+  var jobId = req.query.jobId;
+  if (jobId) {
+    t.readJob({Id: jobId}, function (err, result) {
+      if (err) {
+        console.log('error jobstatus url');
+        res.status(codes.forbidden.code).json(codes.forbidden);
+      } else {
+        console.log(result);
+        res.status(codes.success.code).json(result);
+      }
+    });
+  }else{
+    res.status(codes.badRequest.code).json(codes.badRequest);
+  }
+});
+
 app.get('/transcode', function (req, res) {
   var t = new Transcode(amazon.loadConfig('transcode').AWS);
 
   var newJob = Job.setInputKey('videos/eray.webm')
       .setPipelineId('1443532774984-n248y6')
       .setOutputKeyPrefix('videos/')
-      .setOutputKey('testeray.webm')
+      .setOutputKey('testeray345.webm')
       .setOutputPresetId('1351620000001-000010')
       .Job;
 
   t.transcode(newJob, function (err, result) {
     if (err) {
+      console.log(err);
       res.status(codes.forbidden.code).json(codes.forbidden);
     } else {
       res.status(codes.success.code).json(result);

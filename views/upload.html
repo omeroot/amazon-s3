@@ -5,7 +5,7 @@
 <body>
 <input type="file" id="file_input"/>
 <button id="upload" onclick="upload()">UPLOAD</button>
-<button id="transcode" onclick="transcode()">TRANSCODE</button>
+<button id="transcode" onclick="transcode()">TRANSCODE</button><p id="job-status">status</p>
 
 <p id="status">Please select a file</p>
 <video width="320" height="240" id="video" controls></video>
@@ -13,6 +13,7 @@
 <script>
     var file_name;
     var file_type;
+    var jobId;
 
     function upload() {
             var files = document.getElementById("file_input").files;
@@ -29,9 +30,15 @@
 
     function transcode(){
             var xhr = new XMLHttpRequest();
+
             xhr.open("GET","/transcode?file_name=" + file_name + "&file_type" + file_type);
-            xhr.success = function(data){
-                console.log(data);
+            xhr.onreadystatechange = function (){
+                if(xhr.readyState === 4){
+                    if(xhr.status === 200){
+                        document.getElementById("job-status").innerHTML = "submitted";
+                        var r = JSON.parse(xhr.responseText);
+                    }
+                }
             };
             xhr.send();
     };
@@ -69,14 +76,13 @@
             }
         };
         xhr.onload = function () {
-            console.log('loaded');
             var source = document.createElement('source');
             source.type = 'video/webm';
             source.src = url;
             document.getElementById('video').appendChild(source);
 
             if (xhr.status === 200) {
-                console.log('success');
+                console.log('success upload');
             }
         };
         xhr.onerror = function () {

@@ -1,37 +1,37 @@
 var jobParams = require('../../amazon-params/createJob');
 
-function Job(){
+function JobLoader(){
   this.Job = jobParams;
 };
 
-Job.prototype.setPipelineId = function(pID){
+JobLoader.prototype.setPipelineId = function(pID){
   this.Job.PipelineId = pID;
   return this;
 };
 
-Job.prototype.setOutputKeyPrefix = function(pre){
+JobLoader.prototype.setOutputKeyPrefix = function(pre){
   this.Job.OutputKeyPrefix = pre;
   return this;
 };
 
-Job.prototype.setInputKey = function(ikey){
+JobLoader.prototype.setInputKey = function(ikey){
   this.Job.Input.Key = ikey;
   return this;
 };
 
-Job.prototype.setOutputKey = function(okey){
+JobLoader.prototype.setOutputKey = function(okey){
   this.Job.Output.Key = okey;
   return this;
 };
 
-Job.prototype.setOutputPresetId = function(presetID){
+JobLoader.prototype.setOutputPresetId = function(presetID){
   this.Job.Output.PresetId = presetID;
   return this;
 };
 
-Job.prototype.setInputContainer = function(cKey){
+JobLoader.prototype.setInputContainer = function(cKey){
   this.Job.Input.Container = cKey;
   return this;
 };
 
-module.exports = new Job();
+module.exports = new JobLoader();
