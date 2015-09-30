@@ -1,9 +1,16 @@
 var express = require('express');
 var body_parser = require('body-parser');
 var path = require('path');
-var aws = require('aws-sdk');
+
 var createjob = require(__dirname + '/amazon-params/createJob');
-var conf = require('./configure/amazon.js');
+
+
+var Transcode = require('./libs/amazon/Transcode');
+var AS3 = require('./libs/amazon/AS3');
+var Job = require('./libs/amazon/Job');
+var amazon = require('./libs/amazon/Amazon');
+
+var codes = require('./messages/res-content');
 
 var app = express();
 app.set('views', __dirname + '/views');
@@ -12,98 +19,67 @@ app.set('port', 1337 || 5000);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(body_parser.urlencoded());
 
-//Writer
-//var AWS_ACCESS_KEY = 'AKIAJPJNDFELTMUEA7MA';
-//var AWS_SECRET_KEY = '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';
-//aws.config.region = 'us-east-1';
-
-//Transcoder
-//var AWS_ACCESS_KEY = 'AKIAI6DEYVEIM5USLVVQ';
-//var AWS_SECRET_KEY = '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';
-//aws.config.region = 'us-west-2';
-
-//Reader
-/*
-var AWS_ACCESS_KEY = 'AKIAIHS7TEDDLNOU7VXA';
-var AWS_SECRET_KEY = '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';
-aws.config.region = 'us-east-1';
-
-var S3_BUCKET = 'expo.videos';
-aws.config.accessKeyId = AWS_ACCESS_KEY;
-aws.config.secretAccessKey = AWS_SECRET_KEY;
-*/
 
 app.get('/upload', function (req, res) {
   res.render('upload.html');
 });
 
 app.get('/getvideo', function (req, res) {
-  var s3 = new aws.S3();
+  var as3 = new AS3(amazon.loadConfig('read').AWS);
   var params = {Bucket: 'expo.videos', Key: 'videos/testeray.webm'};
-  s3.getSignedUrl('getObject', params, function (err, url) {
+
+  as3.getSignedUrl(params, 'getObject', function (err, result) {
     if (err) {
-      console.log(err);
+      res.status(codes.forbidden.code).json(codes.forbidden);
+    } else {
+      res.status(codes.success.code).json(result);
     }
-    console.log("The URL is", url);
-    res.json({url: 'https://' + S3_BUCKET + '.s3.amazonaws.com/videos/testeray.webm'});
-  });
+  })
+
 
 });
 
 app.get('/transcode', function (req, res) {
-  //var S3_BUCKET = 'expo.videos';
-  aws.config.accessKeyId = conf.transcoder.AWS_ACCESS_KEY;
-  aws.config.secretAccessKey = conf.transcoder.AWS_SECRET_KEY;
-  aws.config.region = conf.transcoder.region;
+  var t = new Transcode(amazon.loadConfig('transcode').AWS);
 
-  var elastictranscoder = new aws.ElasticTranscoder();
+  var newJob = Job.setInputKey('videos/eray.webm')
+      .setPipelineId('1443532774984-n248y6')
+      .setOutputKeyPrefix('videos/')
+      .setOutputKey('testeray.webm')
+      .setOutputPresetId('1351620000001-000010')
+      .Job;
 
-  elastictranscoder.createJob(createjob, function (err, data) {
+  t.transcode(newJob, function (err, result) {
     if (err) {
-      console.log(err, err.stack);
-    } // an error occurred
-    else{
-      console.log(data);           // successful response
-      res.end();
+      res.status(codes.forbidden.code).json(codes.forbidden);
+    } else {
+      res.status(codes.success.code).json(result);
     }
   });
+
 });
 
 app.get('/sign_s3', function (req, res) {
-  //aws.config.update({accessKeyId: AWS_ACCESS_KEY, secretAccessKey: AWS_SECRET_KEY});
-  var s3 = new aws.S3();
+
+  var as3 = new AS3(amazon.loadConfig('write').AWS);
+
   var s3_params = {
-    Bucket: S3_BUCKET,
+    Bucket: 'expo.videos',
     Key: 'videos/' + req.query.file_name,
     Expires: 60,
     ContentType: req.query.file_type,
     ACL: 'public-read'
   };
-  s3.getSignedUrl('putObject', s3_params, function (err, data) {
+
+  as3.getSignedUrl(s3_params, 'putObject', function (err, result) {
     if (err) {
       console.log(err);
-    }
-    else {
-      var return_data = {
-        signed_request: data,
-        url: 'https://' + S3_BUCKET + '.s3.amazonaws.com/videos/' + req.query.file_name
-      };
-      console.log(return_data);
-      res.write(JSON.stringify(return_data));
-      res.end();
+      res.status(codes.forbidden.code).json(codes.forbidden);
+    } else {
+      console.log(result);
+      res.status(codes.success.code).json(result);
     }
   });
 });
-
-app.post('/submit_form', function (req, res) {
-  username = req.body.username;
-  full_name = req.body.full_name;
-  avatar_url = req.body.avatar_url;
-  //update_account(username, full_name, avatar_url); // TODO: create this function
-  // TODO: Return something useful or redirect
-  console.log('that works man');
-  res.end();
-});
-
 
 app.listen(app.get('port'));
