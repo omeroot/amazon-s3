@@ -2,12 +2,10 @@ var express = require('express');
 var body_parser = require('body-parser');
 var path = require('path');
 
-var createjob = require(__dirname + '/amazon-params/createJob');
-
-
 var Transcode = require('./libs/amazon/Transcode');
 var AS3 = require('./libs/amazon/AS3');
 var Job = require('./libs/amazon/JobLoader');
+var Upload = require('./libs/amazon/UploadLoader');
 var amazon = require('./libs/amazon/Amazon');
 
 var codes = require('./messages/res-content');
@@ -40,12 +38,13 @@ app.get('/getvideo', function (req, res) {
 });
 
 app.get('/jobStatus', function (req, res) {
+  console.log("res received");
   var t = new Transcode(amazon.loadConfig('transcode').AWS);
   var jobId = req.query.jobId;
   if (jobId) {
     t.readJob({Id: jobId}, function (err, result) {
       if (err) {
-        console.log('error jobstatus url');
+        console.log('error jobstatus url',result);
         res.status(codes.forbidden.code).json(codes.forbidden);
       } else {
         console.log(result);
@@ -72,7 +71,8 @@ app.get('/transcode', function (req, res) {
       console.log(err);
       res.status(codes.forbidden.code).json(codes.forbidden);
     } else {
-      res.status(codes.success.code).json(result);
+      console.log(result.Job.Id);
+      res.status(codes.success.code).json(result.Job.Id);
     }
   });
 
@@ -82,17 +82,16 @@ app.get('/sign_s3', function (req, res) {
 
   var as3 = new AS3(amazon.loadConfig('write').AWS);
 
-  var s3_params = {
-    Bucket: 'expo.videos',
-    Key: 'videos/' + req.query.file_name,
-    Expires: 60,
-    ContentType: req.query.file_type,
-    ACL: 'public-read'
-  };
+  var newUpload = Upload.setBucket('expo.transcode')
+      .setKey('videos/' + req.query.file_name)
+      .setExpires(60)
+      .setContentType(req.query.file_type)
+      .setACL('public-read')
+      .uploadParams;
 
-  as3.getSignedUrl(s3_params, 'putObject', function (err, result) {
+  as3.getSignedUrl(newUpload, 'putObject', function (err, result) {
     if (err) {
-      console.log(err);
+      console.log(result);
       res.status(codes.forbidden.code).json(codes.forbidden);
     } else {
       console.log(result);

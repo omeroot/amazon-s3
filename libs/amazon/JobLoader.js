@@ -1,4 +1,4 @@
-var jobParams = require('../../amazon-params/createJob');
+var jobParams = require('../../amazon-params/transcodeParams');
 
 function JobLoader(){
   this.Job = jobParams;
